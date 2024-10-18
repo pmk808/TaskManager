@@ -1,0 +1,25 @@
+info:
+  contact: {}
+paths:
+  /import:
+    post:
+      consumes:
+      - application/json
+      description: Triggers the data import process from a specified directory
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Import data from spreadsheet
+      tags:
+      - import
+swagger: "2.0"

@@ -1,57 +1,66 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"net/http"
 	"os"
-	"time"
 
-	_ "taskmanager/cmd/docs"
+	"taskmanager/config"
+	"taskmanager/handlers"
+	"taskmanager/repository"
+	"taskmanager/services"
+	"taskmanager/validation"
+
+	_ "taskmanager/docs"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
-	// Load environment variables
-	err := godotenv.Load()
+	// Initialize configuration
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Initialize Logger
+	// Initialize logger
 	logger := logrus.New()
-	logger.Out = os.Stdout
+	logger.SetFormatter(&logrus.JSONFormatter{})
+	logger.SetOutput(os.Stdout)
+	logger.SetLevel(logrus.InfoLevel)
 
-	// Initialize Gin
-	router := gin.New()
-	router.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
-		// Customize log output format
-		return fmt.Sprintf("%s - [%s] \"%s %s %s %d %s \"%s\" %s\"\n",
-			param.ClientIP,
-			param.TimeStamp.Format(time.RFC1123),
-			param.Method,
-			param.Path,
-			param.Request.Proto,
-			param.StatusCode,
-			param.Latency,
-			param.Request.UserAgent(),
-			param.ErrorMessage,
-		)
-	}))
+	logger.Info("Application starting")
 
-	// Swagger Route
+	// Initialize repository
+	repo, err := repository.NewPostgresRepository(&cfg.Database, logger)
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to initialize repository")
+	}
+
+	// Initialize validation
+	validator := validation.NewValidator(logger)
+
+	// Initialize service
+	service := services.NewTaskService(repo, validator, logger, cfg.Import.Directory)
+
+	// Initialize handler
+	handler := handlers.NewTaskHandler(service, logger)
+
+	// Initialize Gin router
+	router := gin.Default()
+
+	// Register routes
+	handler.RegisterRoutes(router)
+
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// Start Server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	// Start server
+	logger.Infof("Starting server on %s", cfg.ServerAddress)
+	if err := http.ListenAndServe(cfg.ServerAddress, router); err != nil {
+		logger.Fatalf("Failed to start server: %v", err)
 	}
-
-	logger.Infof("Server is running on port %s", port)
-	router.Run(":" + port)
+	logger.Info("Application initialized successfully")
 }
