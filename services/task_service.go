@@ -2,8 +2,8 @@ package services
 
 import (
 	"fmt"
-	// "os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"taskmanager/interfaces"
@@ -18,6 +18,15 @@ type TaskService struct {
 	validator interfaces.Validator
 	logger    *logrus.Logger
 	directory string
+}
+
+func NewTaskService(repo interfaces.TaskRepository, validator interfaces.Validator, logger *logrus.Logger, directory string) *TaskService {
+	return &TaskService{
+		repo:      repo,
+		validator: validator,
+		logger:    logger,
+		directory: directory,
+	}
 }
 
 func (s *TaskService) ImportData() error {
@@ -84,10 +93,14 @@ func (s *TaskService) readTasksFromSpreadsheet() ([]schemas.Task, error) {
 
 	var tasks []schemas.Task
 	for i, row := range rows {
+		// Log the entire row content
+		s.logger.WithField("row", row).Infof("Processing row %d", i+1)
+
 		if i == 0 {
 			continue // Skip header row
 		}
 		if len(row) < 10 {
+			s.logger.WithField("row", row).Errorf("Row %d has insufficient columns", i+1)
 			return nil, fmt.Errorf("row %d has insufficient columns", i+1)
 		}
 
@@ -108,15 +121,30 @@ func (s *TaskService) readTasksFromSpreadsheet() ([]schemas.Task, error) {
 	return tasks, nil
 }
 
-// Helper functions for parsing (implement these)
+// Helper functions for parsing
 func parseInt(s string) int {
-	// Implement parsing string to int
+	value, err := strconv.Atoi(s)
+	if err != nil {
+		logrus.WithField("value", s).WithError(err).Error("Failed to parse int")
+		return 0 // Handle as appropriate
+	}
+	return value
 }
 
 func parseFloat(s string) float64 {
-	// Implement parsing string to float64
+	value, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		logrus.WithField("value", s).WithError(err).Error("Failed to parse float")
+		return 0.0 // Handle as appropriate
+	}
+	return value
 }
 
 func parseDate(s string) time.Time {
-	// Implement parsing string to time.Time
+	value, err := time.Parse("01-02-06", s) // Adjust the layout as needed
+	if err != nil {
+		logrus.WithField("value", s).WithError(err).Error("Failed to parse date")
+		return time.Time{} // Handle as appropriate
+	}
+	return value
 }

@@ -36,12 +36,56 @@ func NewPostgresRepository(cfg *config.DatabaseConfig, logger *logrus.Logger) (i
 
 	repo := &PostgresRepository{db: db, logger: logger}
 
+	// Create the tasks table if it doesn't exist
 	if err := repo.CreateTableIfNotExists(); err != nil {
 		return nil, fmt.Errorf("failed to create table: %w", err)
 	}
 
 	logger.Info("PostgreSQL repository initialized successfully")
 	return repo, nil
+}
+
+func (r *PostgresRepository) CreateTableIfNotExists() error {
+	query := `
+	CREATE TABLE IF NOT EXISTS tasks (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(100) NOT NULL,
+		email VARCHAR(100) NOT NULL,
+		age INT NOT NULL,
+		address TEXT NOT NULL,
+		phone_number VARCHAR(15),
+		department VARCHAR(50),
+		position VARCHAR(50),
+		salary DECIMAL(10, 2),
+		hire_date DATE
+	);`
+
+	_, err := r.db.Exec(query)
+	if err != nil {
+		r.logger.WithError(err).Error("Failed to create tasks table")
+		return fmt.Errorf("failed to create table: %w", err)
+	}
+
+	r.logger.Info("Tasks table created or already exists")
+	return nil
+}
+
+func (r *PostgresRepository) CreateTask(task *schemas.Task) error {
+	r.logger.WithField("task_name", task.Name).Info("Creating task")
+
+	query := `
+        INSERT INTO tasks (name, email, age, address, phone_number, department, position, salary, hire_date)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `
+	_, err := r.db.Exec(query, task.Name, task.Email, task.Age, task.Address,
+		task.PhoneNumber, task.Department, task.Position, task.Salary, task.HireDate)
+	if err != nil {
+		r.logger.WithError(err).Error("Failed to insert task")
+		return fmt.Errorf("failed to insert task: %w", err)
+	}
+
+	r.logger.Info("Task created successfully")
+	return nil
 }
 
 func (r *PostgresRepository) BulkCreateTasks(tasks []schemas.Task) error {

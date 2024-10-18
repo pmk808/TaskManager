@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt" // Import fmt for string formatting
 	"log"
 	"net/http"
 	"os"
@@ -58,8 +59,9 @@ func main() {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Start server
-	logger.Infof("Starting server on %s", cfg.ServerAddress)
-	if err := http.ListenAndServe(cfg.ServerAddress, router); err != nil {
+	serverAddress := fmt.Sprintf(":%d", cfg.Server.Port) // Create the server address
+	logger.Infof("Starting server on %s", serverAddress)
+	if err := http.ListenAndServe(serverAddress, router); err != nil {
 		logger.Fatalf("Failed to start server: %v", err)
 	}
 	logger.Info("Application initialized successfully")
