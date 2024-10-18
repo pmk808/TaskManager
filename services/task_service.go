@@ -99,7 +99,7 @@ func (s *TaskService) readTasksFromSpreadsheet() ([]schemas.Task, error) {
 		if i == 0 {
 			continue // Skip header row
 		}
-		if len(row) < 10 {
+		if len(row) < 9 {
 			s.logger.WithField("row", row).Errorf("Row %d has insufficient columns", i+1)
 			return nil, fmt.Errorf("row %d has insufficient columns", i+1)
 		}
