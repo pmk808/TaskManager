@@ -1,25 +1,57 @@
+definitions:
+  schemas.TaskImportResponse:
+    properties:
+      errors:
+        items:
+          type: string
+        type: array
+      imported_at:
+        type: string
+      message:
+        type: string
+      stats:
+        $ref: '#/definitions/schemas.TaskImportStats'
+      success:
+        type: boolean
+      total_entries:
+        type: integer
+    type: object
+  schemas.TaskImportStats:
+    properties:
+      duration_ms:
+        description: Changed from time.Duration to int64
+        type: integer
+      end_time:
+        type: string
+      error_count:
+        type: integer
+      start_time:
+        type: string
+      success_count:
+        type: integer
+      total_processed:
+        type: integer
+    type: object
 info:
   contact: {}
 paths:
-  /import:
+  /api/commands/import:
     post:
       consumes:
       - application/json
-      description: Triggers the data import process from a specified directory
+      description: Triggers the task import process from a specified directory
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Successful import response
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/schemas.TaskImportResponse'
         "500":
-          description: Internal Server Error
+          description: Error import response
           schema:
-            additionalProperties: true
-            type: object
-      summary: Import data from spreadsheet
+            $ref: '#/definitions/schemas.TaskImportResponse'
+      summary: Import tasks from CSV
       tags:
-      - import
+      - commands
 swagger: "2.0"

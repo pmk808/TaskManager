@@ -1,7 +1,9 @@
 package interfaces
 
-// import "taskmanager/schemas"
+import (
+	"taskmanager/Services/CommandServices/ImportTaskService/schemas"
+)
 
-type TaskService interface {
-    ImportData() error
+type ImportService interface {
+	Import() (*schemas.TaskImportResponse, error)
 }

@@ -1,52 +1,62 @@
-package commandrequest
+// RequestControllers/CommandRequest/CommandApiController.go
+package CommandRequest
 
 import (
 	"net/http"
-	
+	"taskmanager/Services/CommandServices/ImportTaskService/interfaces"
+	"taskmanager/Services/CommandServices/ImportTaskService/schemas"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
-type CommandApiController struct {
-	importTaskService ImportTaskService
-	logger           *logrus.Logger
+type commandApiController struct {
+	importService interfaces.ImportService
+	logger        *logrus.Logger
 }
 
-// ImportTaskService interface defined within the same package
-type ImportTaskService interface {
-	ImportData() error
-}
-
-func NewCommandApiController(importTaskService ImportTaskService, logger *logrus.Logger) *CommandApiController {
-	return &CommandApiController{
-		importTaskService: importTaskService,
-		logger:           logger,
+func NewCommandApiController(
+	importService interfaces.ImportService,
+	logger *logrus.Logger,
+) *commandApiController {
+	return &commandApiController{
+		importService: importService,
+		logger:        logger,
 	}
 }
 
-func (c *CommandApiController) RegisterRoutes(router *gin.Engine) {
-	commandGroup := router.Group("/api/v1/commands")
-	{
-		commandGroup.POST("/import-tasks", c.importTasks)
-	}
+func (c *commandApiController) RegisterRoutes(router *gin.RouterGroup) {
+	router.POST("/import", c.ImportTasks)
 }
 
-// @Summary Import tasks from spreadsheet
+// ImportTasks godoc
+// @Summary Import tasks from CSV
 // @Description Triggers the task import process from a specified directory
 // @Tags commands
 // @Accept json
 // @Produce json
-// @Success 200 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/commands/import-tasks [post]
-func (c *CommandApiController) importTasks(ctx *gin.Context) {
+// @Success 200 {object} schemas.TaskImportResponse "Successful import response"
+// @Failure 500 {object} schemas.TaskImportResponse "Error import response"
+// @Router /api/commands/import [post]
+func (c *commandApiController) ImportTasks(ctx *gin.Context) {
 	c.logger.Info("Received request to import tasks")
 
-	if err := c.importTaskService.ImportData(); err != nil {
+	response, err := c.importService.Import()
+	if err != nil {
 		c.logger.WithError(err).Error("Failed to import tasks")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to import tasks"})
+		if response != nil {
+			// Use the structured response even in error case
+			ctx.JSON(http.StatusInternalServerError, response)
+		} else {
+			// Fallback if no response was received
+			ctx.JSON(http.StatusInternalServerError, schemas.TaskImportResponse{
+				Success: false,
+				Message: "Failed to import tasks",
+				Errors:  []string{err.Error()},
+			})
+		}
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Tasks import completed successfully"})
+	ctx.JSON(http.StatusOK, response)
 }

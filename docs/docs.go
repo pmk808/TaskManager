@@ -15,9 +15,9 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/import": {
+        "/api/commands/import": {
             "post": {
-                "description": "Triggers the data import process from a specified directory",
+                "description": "Triggers the task import process from a specified directory",
                 "consumes": [
                     "application/json"
                 ],
@@ -25,24 +25,74 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "import"
+                    "commands"
                 ],
-                "summary": "Import data from spreadsheet",
+                "summary": "Import tasks from CSV",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Successful import response",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/schemas.TaskImportResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Error import response",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/schemas.TaskImportResponse"
                         }
                     }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "schemas.TaskImportResponse": {
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "imported_at": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "stats": {
+                    "$ref": "#/definitions/schemas.TaskImportStats"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "total_entries": {
+                    "type": "integer"
+                }
+            }
+        },
+        "schemas.TaskImportStats": {
+            "type": "object",
+            "properties": {
+                "duration_ms": {
+                    "description": "Changed from time.Duration to int64",
+                    "type": "integer"
+                },
+                "end_time": {
+                    "type": "string"
+                },
+                "error_count": {
+                    "type": "integer"
+                },
+                "start_time": {
+                    "type": "string"
+                },
+                "success_count": {
+                    "type": "integer"
+                },
+                "total_processed": {
+                    "type": "integer"
                 }
             }
         }

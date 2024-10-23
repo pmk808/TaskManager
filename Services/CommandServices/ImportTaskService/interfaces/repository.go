@@ -1,7 +1,11 @@
 package interfaces
 
-import "taskmanager/schemas"
+import (
+    // "context"
+    "taskmanager/schemas"
+)
 
 type TaskRepository interface {
+    CreateTableIfNotExists() error
     BulkCreateTasks(tasks []schemas.Task) error
 }

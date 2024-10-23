@@ -1,68 +1,120 @@
+// cmd/main.go
 package main
 
 import (
-	"fmt" // Import fmt for string formatting
+	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"taskmanager/config"
-	"taskmanager/handlers"
-	"taskmanager/repository"
-	"taskmanager/services"
-	"taskmanager/validation"
+	"taskmanager/Repository/CommandRepository"
+	"taskmanager/RequestControllers/CommandRequest"
+	"taskmanager/RequestControllers/httpSetup"
+	"taskmanager/RequestControllers/httpSetup/config"
+	"taskmanager/RequestControllers/httpSetup/logger"
+	"taskmanager/Services/CommandServices/ImportTaskService"
+	"taskmanager/Services/CommandServices/ImportTaskService/validation"
 
 	_ "taskmanager/docs"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
 	// Initialize configuration
-	cfg, err := config.LoadConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
 	// Initialize logger
-	logger := logrus.New()
-	logger.SetFormatter(&logrus.JSONFormatter{})
-	logger.SetOutput(os.Stdout)
-	logger.SetLevel(logrus.InfoLevel)
+	appLogger := logger.InitializeLogger()
+	appLogger.Info("Application starting")
 
-	logger.Info("Application starting")
-
-	// Initialize repository
-	repo, err := repository.NewPostgresRepository(&cfg.Database, logger)
+	// Initialize business logic dependencies
+	app, err := initializeApp(cfg, appLogger)
 	if err != nil {
-		logger.WithError(err).Fatal("Failed to initialize repository")
+		appLogger.WithError(err).Fatal("Failed to initialize application")
 	}
 
-	// Initialize validation
-	validator := validation.NewValidator(logger)
+	// Start server and handle graceful shutdown
+	startServerWithGracefulShutdown(app, cfg.Server.Port, appLogger)
+}
+
+type appDependencies struct {
+	router *gin.Engine
+}
+
+func initializeApp(cfg *config.Config, logger *logrus.Logger) (*appDependencies, error) {
+	// Initialize repository
+	commandRepo, err := CommandRepository.NewTaskCommandRepository(&cfg.Database, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize command repository: %w", err)
+	}
+
+	// Initialize validator
+	dataValidator := validation.NewDataValidator(logger)
 
 	// Initialize service
-	service := services.NewTaskService(repo, validator, logger, cfg.Import.Directory)
+	importService := ImportTaskService.NewImportService(
+		commandRepo,
+		dataValidator,
+		logger,
+		cfg.Import.Directory,
+	)
 
-	// Initialize handler
-	handler := handlers.NewTaskHandler(service, logger)
+	// Initialize controller
+	commandController := CommandRequest.NewCommandApiController(importService, logger)
 
-	// Initialize Gin router
-	router := gin.Default()
-
-	// Register routes
-	handler.RegisterRoutes(router)
-
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-	// Start server
-	serverAddress := fmt.Sprintf(":%d", cfg.Server.Port) // Create the server address
-	logger.Infof("Starting server on %s", serverAddress)
-	if err := http.ListenAndServe(serverAddress, router); err != nil {
-		logger.Fatalf("Failed to start server: %v", err)
+	// Setup HTTP router
+	routerConfig := httpSetup.RouterConfig{
+		CommandController: commandController,
+		Logger:            logger,
 	}
-	logger.Info("Application initialized successfully")
+	router := httpSetup.SetupRouter(routerConfig)
+
+	return &appDependencies{
+		router: router,
+	}, nil
+}
+
+func startServerWithGracefulShutdown(app *appDependencies, port int, logger *logrus.Logger) {
+	serverAddress := fmt.Sprintf(":%d", port)
+	logger.Infof("Starting server on %s", serverAddress)
+
+	server := &http.Server{
+		Addr:    serverAddress,
+		Handler: app.router,
+	}
+
+	// Server shutdown channel
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start server in a goroutine
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// Wait for shutdown signal
+	<-quit
+	logger.Info("Shutting down server...")
+
+	// Create shutdown context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Attempt graceful shutdown
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	logger.Info("Server exiting")
 }
