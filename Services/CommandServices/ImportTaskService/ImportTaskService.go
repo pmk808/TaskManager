@@ -1,6 +1,7 @@
 package ImportTaskService
 
 import (
+	"bytes"
 	"encoding/csv"
 	"fmt"
 	"os"
@@ -98,6 +99,8 @@ func (s *importService) validateCSVHeaders(headers []string) error {
 		return fmt.Errorf("CSV is missing required columns. Expected: %v", expectedHeaders)
 	}
 
+	headers[0] = strings.TrimPrefix(headers[0], "\uFEFF")
+
 	for i, expected := range expectedHeaders {
 		if !strings.EqualFold(headers[i], expected) {
 			return fmt.Errorf("invalid header at column %d. Expected: %s, Got: %s",
@@ -122,16 +125,20 @@ func (s *importService) readEntriesFromCSV() ([]schemas.TaskImportEntry, []error
 	filePath := files[0]
 	s.logger.WithField("file", filePath).Info("Reading CSV file")
 
-	file, err := os.Open(filePath)
+	// Read file content
+	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, []error{fmt.Errorf("failed to open CSV file: %w", err)}
+		return nil, []error{fmt.Errorf("failed to read CSV file: %w", err)}
 	}
-	defer file.Close()
 
-	reader := csv.NewReader(file)
-	reader.FieldsPerRecord = -1
+	// Remove BOM if present
+	content = bytes.TrimPrefix(content, []byte{0xEF, 0xBB, 0xBF})
+
+	// Create reader from cleaned content
+	reader := csv.NewReader(bytes.NewReader(content))
+	reader.FieldsPerRecord = -1 // Allow variable number of fields
 	reader.TrimLeadingSpace = true
-	reader.LazyQuotes = true
+	reader.LazyQuotes = true // Allow lazy quotes
 
 	rows, err := reader.ReadAll()
 	if err != nil {

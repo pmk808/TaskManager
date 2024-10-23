@@ -121,13 +121,23 @@ func (v *dataValidator) checkPhone(phoneNumber string) error {
 		return fmt.Errorf("phone number cannot be empty")
 	}
 
-	phoneRegex := regexp.MustCompile(`^\+?[\d\s-]{10,15}$`)
-	if !phoneRegex.MatchString(phoneNumber) {
-		return fmt.Errorf("invalid phone number format")
+	// Remove common phone number formatting characters
+	cleanPhone := strings.Map(func(r rune) rune {
+		switch r {
+		case ' ', '-', '(', ')', '+':
+			return -1
+		default:
+			return r
+		}
+	}, phoneNumber)
+
+	// Check if the cleaned number contains only digits
+	if !regexp.MustCompile(`^\d{7,15}$`).MatchString(cleanPhone) {
+		return fmt.Errorf("phone number must contain 7-15 digits")
 	}
+
 	return nil
 }
-
 func (v *dataValidator) checkDepartment(department string) error {
 	department = strings.TrimSpace(department)
 	if department == "" {

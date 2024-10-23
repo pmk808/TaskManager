@@ -39,6 +39,11 @@ func NewTaskCommandRepository(cfg *config.DatabaseConfig, logger *logrus.Logger)
 		logger: logger,
 	}
 
+	// Create table if it doesn't exist
+	if err := repo.CreateTableIfNotExists(); err != nil {
+		return nil, fmt.Errorf("failed to initialize table: %w", err)
+	}
+
 	logger.Info("Task command repository initialized successfully")
 	return repo, nil
 }
@@ -51,12 +56,17 @@ func (r *taskCommandRepository) CreateTableIfNotExists() error {
         email VARCHAR(100) NOT NULL,
         age INT NOT NULL,
         address TEXT NOT NULL,
-        phone_number VARCHAR(15),
-        department VARCHAR(50),
-        position VARCHAR(50),
-        salary DECIMAL(10, 2),
-        hire_date DATE
-    );`
+        phone_number VARCHAR(15) NOT NULL,
+        department VARCHAR(50) NOT NULL,
+        position VARCHAR(50) NOT NULL,
+        salary DECIMAL(10, 2) NOT NULL,
+        hire_date DATE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    `
+
+	r.logger.Info("Creating tasks table if it doesn't exist")
 
 	_, err := r.db.Exec(query)
 	if err != nil {
@@ -64,12 +74,17 @@ func (r *taskCommandRepository) CreateTableIfNotExists() error {
 		return fmt.Errorf("failed to create table: %w", err)
 	}
 
-	r.logger.Info("Tasks table created or already exists")
+	r.logger.Info("Tasks table created or verified successfully")
 	return nil
 }
 
 func (r *taskCommandRepository) BulkCreateTasks(tasks []schemas.TaskImportEntry) error {
-	r.logger.WithField("entry_count", len(tasks)).Info("Starting bulk task creation")
+	r.logger.WithField("task_count", len(tasks)).Info("Starting bulk task creation")
+
+	// Ensure table exists before proceeding
+	if err := r.CreateTableIfNotExists(); err != nil {
+		return fmt.Errorf("failed to verify table existence: %w", err)
+	}
 
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -78,27 +93,73 @@ func (r *taskCommandRepository) BulkCreateTasks(tasks []schemas.TaskImportEntry)
 	}
 	defer tx.Rollback()
 
-	// Using COPY for better performance with bulk inserts
-	stmt, err := tx.Prepare(`
-        COPY tasks (name, email, age, address, phone_number, department, position, salary, hire_date)
-        FROM STDIN WITH (FORMAT csv)
-    `)
+	// Create a temporary table for bulk insert
+	createTempTableQuery := `
+        CREATE TEMP TABLE temp_tasks (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            email VARCHAR(100) NOT NULL,
+            age INT NOT NULL,
+            address TEXT NOT NULL,
+            phone_number VARCHAR(15) NOT NULL,
+            department VARCHAR(50) NOT NULL,
+            position VARCHAR(50) NOT NULL,
+            salary DECIMAL(10, 2) NOT NULL,
+            hire_date DATE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `
+	_, err = tx.Exec(createTempTableQuery)
 	if err != nil {
-		r.logger.WithError(err).Error("Failed to prepare statement")
+		return fmt.Errorf("failed to create temp table: %w", err)
+	}
+
+	// Prepare the INSERT statement
+	insertStmt := `
+        INSERT INTO temp_tasks (
+            name, email, age, address, phone_number, 
+            department, position, salary, hire_date
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `
+	stmt, err := tx.Prepare(insertStmt)
+	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
 	defer stmt.Close()
 
-	for _, task := range tasks {
-		_, err := stmt.Exec(
-			task.Name, task.Email, task.Age, task.Address,
-			task.PhoneNumber, task.Department, task.Position,
-			task.Salary, task.HireDate,
+	// Insert all tasks into the temporary table
+	for i, task := range tasks {
+		_, err = stmt.Exec(
+			task.Name,
+			task.Email,
+			task.Age,
+			task.Address,
+			task.PhoneNumber,
+			task.Department,
+			task.Position,
+			task.Salary,
+			task.HireDate,
 		)
 		if err != nil {
-			r.logger.WithError(err).Error("Failed to insert task")
-			return fmt.Errorf("failed to insert task: %w", err)
+			return fmt.Errorf("failed to insert task at row %d: %w", i+1, err)
 		}
+	}
+
+	// Insert from temporary table to actual table
+	insertFromTempQuery := `
+        INSERT INTO tasks (
+            name, email, age, address, phone_number,
+            department, position, salary, hire_date
+        )
+        SELECT 
+            name, email, age, address, phone_number,
+            department, position, salary, hire_date
+        FROM temp_tasks
+    `
+	_, err = tx.Exec(insertFromTempQuery)
+	if err != nil {
+		return fmt.Errorf("failed to insert from temp table: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
