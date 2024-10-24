@@ -1,8 +1,10 @@
 package interfaces
 
-import "taskmanager/schemas"
+import (
+	"taskmanager/Services/CommandServices/ImportTaskService/schemas"
+)
 
 type TaskValidator interface {
-    ValidateTask(task *schemas.Task) error
-    ValidateTasks(tasks []schemas.Task) error
+	ValidateEntry(entry *schemas.TaskImportEntry) error
+	ValidateBatch(entries []schemas.TaskImportEntry) error
 }
