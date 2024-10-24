@@ -5,11 +5,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SQL_DIR="$SCRIPT_DIR/../sql"
 
 # Database connection parameters
-DB_HOST="localhost"
-DB_PORT="5432"
-DB_USER="postgres"
-DB_PASSWORD="peemak"
-DB_NAME="taskmanager"
+
 
 # Color codes for output
 RED='\033[0;31m'
