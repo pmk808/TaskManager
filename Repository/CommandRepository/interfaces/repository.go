@@ -5,6 +5,5 @@ import (
 )
 
 type TaskCommandRepository interface {
-	CreateTableIfNotExists() error
 	BulkCreateTasks(tasks []schemas.TaskImportEntry) error
 }
