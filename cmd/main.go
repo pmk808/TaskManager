@@ -11,14 +11,19 @@ import (
 	"time"
 
 	"taskmanager/Repository/CommandRepository"
-	repoInterfaces "taskmanager/Repository/CommandRepository/interfaces"
+	cmdRepoInterfaces "taskmanager/Repository/CommandRepository/interfaces"
+	"taskmanager/Repository/QueryRepository"
+	queryRepoInterfaces "taskmanager/Repository/QueryRepository/interfaces"
 	"taskmanager/RequestControllers/CommandRequest"
+	"taskmanager/RequestControllers/QueryRequest"
 	"taskmanager/RequestControllers/httpSetup"
 	"taskmanager/RequestControllers/httpSetup/config"
 	"taskmanager/RequestControllers/httpSetup/logger"
 	"taskmanager/Services/CommandServices/ImportTaskService"
-	serviceInterfaces "taskmanager/Services/CommandServices/ImportTaskService/interfaces"
+	commandServiceInterfaces "taskmanager/Services/CommandServices/ImportTaskService/interfaces"
 	"taskmanager/Services/CommandServices/ImportTaskService/validation"
+	"taskmanager/Services/QueryServices/TaskQueryService"
+	queryServiceInterfaces "taskmanager/Services/QueryServices/TaskQueryService/interfaces"
 
 	_ "taskmanager/docs"
 
@@ -62,19 +67,19 @@ func initializeApp(cfg *config.Config, logger *logrus.Logger) (*appDependencies,
 	logger.Info("Initializing application dependencies")
 
 	// Initialize repositories
-	commandRepo, err := initializeRepositories(cfg, logger)
+	commandRepo, queryRepo, err := initializeRepositories(cfg, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	// Initialize services
-	services, err := initializeServices(cfg, logger, commandRepo)
+	commandService, queryService, err := initializeServices(cfg, logger, commandRepo, queryRepo)
 	if err != nil {
 		return nil, err
 	}
 
 	// Initialize controllers
-	router, err := initializeControllers(cfg, logger, services)
+	router, err := initializeControllers(cfg, logger, commandService, queryService)
 	if err != nil {
 		return nil, err
 	}
@@ -85,51 +90,73 @@ func initializeApp(cfg *config.Config, logger *logrus.Logger) (*appDependencies,
 	}, nil
 }
 
-func initializeRepositories(cfg *config.Config, logger *logrus.Logger) (repoInterfaces.TaskCommandRepository, error) {
+func initializeRepositories(cfg *config.Config, logger *logrus.Logger) (
+	cmdRepo cmdRepoInterfaces.TaskCommandRepository,
+	queryRepo queryRepoInterfaces.TaskQueryRepository,
+	err error,
+) {
 	logger.Info("Initializing repositories")
 
-	commandRepo, err := CommandRepository.NewTaskCommandRepository(&cfg.Database, logger)
+	cmdRepo, err = CommandRepository.NewTaskCommandRepository(&cfg.Database, logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize command repository: %w", err)
+		return nil, nil, fmt.Errorf("failed to initialize command repository: %w", err)
 	}
 
-	return commandRepo, nil
+	queryRepo, err = QueryRepository.NewTaskQueryRepository(&cfg.Database, logger)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to initialize query repository: %w", err)
+	}
+
+	return cmdRepo, queryRepo, nil
 }
 
 func initializeServices(
 	cfg *config.Config,
 	logger *logrus.Logger,
-	commandRepo repoInterfaces.TaskCommandRepository,
-) (serviceInterfaces.ImportService, error) {
+	commandRepo cmdRepoInterfaces.TaskCommandRepository,
+	queryRepo queryRepoInterfaces.TaskQueryRepository,
+) (
+	commandService commandServiceInterfaces.ImportService,
+	queryService queryServiceInterfaces.TaskQueryService,
+	err error,
+) {
 	logger.Info("Initializing services")
 
 	// Initialize validator
 	dataValidator := validation.NewDataValidator(logger)
 
-	// Initialize import service
-	importService := ImportTaskService.NewImportService(
+	// Initialize services
+	commandService = ImportTaskService.NewImportService(
 		commandRepo,
 		dataValidator,
 		logger,
 		cfg.Import.Directory,
 	)
 
-	return importService, nil
+	queryService = TaskQueryService.NewTaskQueryService(
+		queryRepo,
+		logger,
+	)
+
+	return commandService, queryService, nil
 }
 
 func initializeControllers(
 	cfg *config.Config,
 	logger *logrus.Logger,
-	importService serviceInterfaces.ImportService,
+	commandService commandServiceInterfaces.ImportService,
+	queryService queryServiceInterfaces.TaskQueryService,
 ) (*gin.Engine, error) {
 	logger.Info("Initializing controllers")
 
-	// Initialize controller
-	commandController := CommandRequest.NewCommandApiController(importService, logger)
+	// Initialize controllers
+	commandController := CommandRequest.NewCommandApiController(commandService, logger)
+	queryController := QueryRequest.NewQueryApiController(queryService, logger)
 
 	// Setup HTTP router
 	routerConfig := httpSetup.RouterConfig{
 		CommandController: commandController,
+		QueryController:   queryController,
 		Logger:            logger,
 	}
 	router := httpSetup.SetupRouter(routerConfig)

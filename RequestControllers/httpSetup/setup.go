@@ -2,6 +2,7 @@ package httpSetup
 
 import (
 	"taskmanager/RequestControllers/CommandRequest/interfaces"
+	queryInterfaces "taskmanager/RequestControllers/QueryRequest/interfaces"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -11,6 +12,7 @@ import (
 
 type RouterConfig struct {
 	CommandController interfaces.CommandApiController
+	QueryController   queryInterfaces.QueryApiController
 	Logger            *logrus.Logger
 }
 
@@ -61,10 +63,14 @@ func SetupRouter(config RouterConfig) *gin.Engine {
 
 	// Setup API groups
 	apiGroup := router.Group("/api")
-	commandsGroup := apiGroup.Group("/commands")
 
-	// Register command routes
+	// Command routes
+	commandsGroup := apiGroup.Group("/commands")
 	config.CommandController.RegisterRoutes(commandsGroup)
+
+	// Query routes
+	queriesGroup := apiGroup.Group("/queries")
+	config.QueryController.RegisterRoutes(queriesGroup)
 
 	// Setup swagger
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
