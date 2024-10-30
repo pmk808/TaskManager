@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	repoInterfaces "taskmanager/Repository/QueryRepository/interfaces"
-	serviceInterfaces "taskmanager/Services/QueryServices/interfaces"
-	"taskmanager/Services/QueryServices/validation"
+	serviceInterfaces "taskmanager/Services/QueryServices/TaskQueryService/interfaces"
+	"taskmanager/Services/QueryServices/TaskQueryService/validation"
 
 	"github.com/sirupsen/logrus"
 )

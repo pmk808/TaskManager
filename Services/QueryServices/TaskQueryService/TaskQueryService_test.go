@@ -6,7 +6,7 @@ import (
 	"time"
 
 	repoInterfaces "taskmanager/Repository/QueryRepository/interfaces"
-	serviceInterfaces "taskmanager/Services/QueryServices/interfaces"
+	serviceInterfaces "taskmanager/Services/QueryServices/TaskQueryService/interfaces"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
