@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"context"
+	"time"
 )
 
 // TaskQueryRepository defines the methods for querying tasks
@@ -31,11 +32,11 @@ type TaskDTO struct {
 
 // TaskStatusDTO represents a task status history entry
 type TaskStatusDTO struct {
-	TaskID            int    `json:"task_id"`
-	ClientName        string `json:"client_name"`
-	ClientID          string `json:"client_id"`
-	Status            string `json:"status"`
-	StatusDescription string `json:"status_description"`
-	UpdatedBy         string `json:"updated_by"`
-	CreatedAt         string `json:"created_at"`
+	TaskID            int       `json:"task_id"`
+	ClientName        string    `json:"client_name"`
+	ClientID          string    `json:"client_id"`
+	Status            string    `json:"status"`
+	StatusDescription string    `json:"status_description"`
+	UpdatedBy         string    `json:"updated_by"`
+	CreatedAt         time.Time `json:"created_at"`
 }
