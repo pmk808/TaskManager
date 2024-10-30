@@ -95,14 +95,22 @@ main() {
     # Load configuration
     load_config
 
-    # Verify SQL files exist
+    # Check SQL files exist
+    local required_files=(
+        "01_create_database.sql"
+        "02_create_schema.sql"
+        "03_create_task_table.sql"
+        "04_create_status_table.sql"
+        "05_insert_dummy_data.sql"
+    )
+
     log_message "info" "Checking SQL files..."
-    for sql_file in "$SQL_DIR"/*.sql; do
-        if [ ! -f "$sql_file" ]; then
-            log_message "error" "SQL file not found: $sql_file"
+    for file in "${required_files[@]}"; do
+        if [ ! -f "$SQL_DIR/$file" ]; then
+            log_message "error" "Required SQL file not found: $file"
             exit 1
         else
-            log_message "info" "Found SQL file: $sql_file"
+            log_message "info" "Found SQL file: $file"
         fi
     done
 
@@ -117,8 +125,14 @@ main() {
         # Create schema
         execute_sql_file "$SQL_DIR/02_create_schema.sql" "$DB_NAME" "Creating schema..."
         
-        # Create tables
-        execute_sql_file "$SQL_DIR/03_create_table.sql" "$DB_NAME" "Creating tables..."
+        # Create task table
+        execute_sql_file "$SQL_DIR/03_create_task_table.sql" "$DB_NAME" "Creating task table..."
+
+        # Create status table
+        execute_sql_file "$SQL_DIR/04_create_status_table.sql" "$DB_NAME" "Creating status table..."
+
+        # Insert dummy data
+        execute_sql_file "$SQL_DIR/05_insert_dummy_data.sql" "$DB_NAME" "Inserting dummy data..."
         
         log_message "info" "Database setup completed successfully!"
     else
