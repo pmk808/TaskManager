@@ -5,5 +5,5 @@ import (
 )
 
 type TaskCommandRepository interface {
-	BulkCreateTasks(tasks []schemas.TaskImportEntry) error
+	BulkCreateTasks(tasks []schemas.TaskModel) error
 }

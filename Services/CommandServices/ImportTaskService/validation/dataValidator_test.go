@@ -15,12 +15,12 @@ func TestDataValidator(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		entry   schemas.TaskImportEntry
+		entry   schemas.TaskImportDTO // Changed from TaskImportEntry
 		wantErr bool
 	}{
 		{
 			name: "Valid entry",
-			entry: schemas.TaskImportEntry{
+			entry: schemas.TaskImportDTO{ // Changed struct name
 				Name:        "John Doe",
 				Email:       "john@example.com",
 				Age:         30,
@@ -35,7 +35,7 @@ func TestDataValidator(t *testing.T) {
 		},
 		{
 			name: "Missing name",
-			entry: schemas.TaskImportEntry{
+			entry: schemas.TaskImportDTO{ // Changed struct name
 				Email:       "john@example.com",
 				Age:         30,
 				Address:     "123 Main St",
@@ -49,7 +49,7 @@ func TestDataValidator(t *testing.T) {
 		},
 		{
 			name: "Zero age",
-			entry: schemas.TaskImportEntry{
+			entry: schemas.TaskImportDTO{ // Changed struct name
 				Name:        "John Doe",
 				Email:       "john@example.com",
 				Age:         0,
@@ -64,7 +64,7 @@ func TestDataValidator(t *testing.T) {
 		},
 		{
 			name: "Invalid email",
-			entry: schemas.TaskImportEntry{
+			entry: schemas.TaskImportDTO{ // Changed struct name
 				Name:        "John Doe",
 				Email:       "invalid-email",
 				Age:         30,
@@ -79,7 +79,7 @@ func TestDataValidator(t *testing.T) {
 		},
 		{
 			name: "Invalid phone number",
-			entry: schemas.TaskImportEntry{
+			entry: schemas.TaskImportDTO{ // Changed struct name
 				Name:        "John Doe",
 				Email:       "john@example.com",
 				Age:         30,
@@ -94,7 +94,7 @@ func TestDataValidator(t *testing.T) {
 		},
 		{
 			name: "Negative salary",
-			entry: schemas.TaskImportEntry{
+			entry: schemas.TaskImportDTO{ // Changed struct name
 				Name:        "John Doe",
 				Email:       "john@example.com",
 				Age:         30,
@@ -125,7 +125,7 @@ func TestDataValidatorBatch(t *testing.T) {
 	logger := logrus.New()
 	validator := NewDataValidator(logger)
 
-	validEntry := schemas.TaskImportEntry{
+	validEntry := schemas.TaskImportDTO{ // Changed struct name
 		Name:        "John Doe",
 		Email:       "john@example.com",
 		Age:         30,
@@ -137,7 +137,7 @@ func TestDataValidatorBatch(t *testing.T) {
 		HireDate:    time.Now(),
 	}
 
-	invalidEntry := schemas.TaskImportEntry{
+	invalidEntry := schemas.TaskImportDTO{ // Changed struct name
 		Name:        "", // Invalid: empty name
 		Email:       "john@example.com",
 		Age:         30,
@@ -151,27 +151,27 @@ func TestDataValidatorBatch(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		entries []schemas.TaskImportEntry
+		entries []schemas.TaskImportDTO // Changed type
 		wantErr bool
 	}{
 		{
 			name:    "Empty batch",
-			entries: []schemas.TaskImportEntry{},
+			entries: []schemas.TaskImportDTO{}, // Changed type
 			wantErr: false,
 		},
 		{
 			name:    "Single valid entry",
-			entries: []schemas.TaskImportEntry{validEntry},
+			entries: []schemas.TaskImportDTO{validEntry}, // Changed type
 			wantErr: false,
 		},
 		{
 			name:    "Multiple valid entries",
-			entries: []schemas.TaskImportEntry{validEntry, validEntry},
+			entries: []schemas.TaskImportDTO{validEntry, validEntry}, // Changed type
 			wantErr: false,
 		},
 		{
 			name:    "Contains invalid entry",
-			entries: []schemas.TaskImportEntry{validEntry, invalidEntry},
+			entries: []schemas.TaskImportDTO{validEntry, invalidEntry}, // Changed type
 			wantErr: true,
 		},
 	}

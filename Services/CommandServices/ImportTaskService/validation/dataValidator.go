@@ -20,7 +20,7 @@ func NewDataValidator(logger *logrus.Logger) interfaces.Validator {
 	}
 }
 
-func (v *dataValidator) ValidateEntry(entry *schemas.TaskImportEntry) error {
+func (v *dataValidator) ValidateEntry(entry *schemas.TaskImportDTO) error {
 	if err := v.checkName(entry.Name); err != nil {
 		return fmt.Errorf("invalid name: %w", err)
 	}
@@ -56,7 +56,7 @@ func (v *dataValidator) ValidateEntry(entry *schemas.TaskImportEntry) error {
 	return nil
 }
 
-func (v *dataValidator) ValidateBatch(entries []schemas.TaskImportEntry) error {
+func (v *dataValidator) ValidateBatch(entries []schemas.TaskImportDTO) error {
 	v.logger.WithField("entry_count", len(entries)).Info("Starting batch validation")
 
 	for i, entry := range entries {

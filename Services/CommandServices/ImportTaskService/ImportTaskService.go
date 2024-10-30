@@ -38,8 +38,8 @@ func NewImportService(
 	}
 }
 
-func (s *importService) Import() (*schemas.TaskImportResponse, error) {
-	stats := &schemas.TaskImportStats{
+func (s *importService) Import() (*schemas.ImportTaskResponseDTO, error) {
+	stats := &schemas.ImportStatsDTO{
 		StartTime: time.Now(),
 	}
 	defer func() {
@@ -52,8 +52,16 @@ func (s *importService) Import() (*schemas.TaskImportResponse, error) {
 		return s.createErrorResponse(errs, stats), fmt.Errorf("failed to read entries from CSV")
 	}
 
-	stats.TotalProcessed = len(entries)
-	s.logger.WithField("entry_count", len(entries)).Info("Entries read from CSV")
+	// Convert DTOs to models
+	var taskModels []schemas.TaskModel
+	for _, entry := range entries {
+		var model schemas.TaskModel
+		model.MapFromDTO(entry)
+		taskModels = append(taskModels, model)
+	}
+
+	stats.TotalProcessed = len(taskModels)
+	s.logger.WithField("entry_count", len(taskModels)).Info("Entries read from CSV")
 
 	if err := s.validator.ValidateBatch(entries); err != nil {
 		s.logger.WithError(err).Error("Validation failed")
@@ -62,18 +70,18 @@ func (s *importService) Import() (*schemas.TaskImportResponse, error) {
 
 	s.logger.Info("All entries passed validation")
 
-	if err := s.repo.BulkCreateTasks(entries); err != nil {
+	if err := s.repo.BulkCreateTasks(taskModels); err != nil {
 		s.logger.WithError(err).Error("Failed to import entries")
 		return s.createErrorResponse([]error{err}, stats), fmt.Errorf("failed to import entries: %w", err)
 	}
 
-	stats.SuccessCount = len(entries)
+	stats.SuccessCount = len(taskModels)
 	s.logger.WithFields(logrus.Fields{
 		"duration":    stats.DurationMS,
 		"entry_count": len(entries),
 	}).Info("Data import process completed successfully")
 
-	return &schemas.TaskImportResponse{
+	return &schemas.ImportTaskResponseDTO{
 		Success:      true,
 		Message:      "Import completed successfully",
 		ImportedAt:   time.Now(),
@@ -111,7 +119,7 @@ func (s *importService) validateCSVHeaders(headers []string) error {
 	return nil
 }
 
-func (s *importService) readEntriesFromCSV() ([]schemas.TaskImportEntry, []error) {
+func (s *importService) readEntriesFromCSV() ([]schemas.TaskImportDTO, []error) {
 	var errors []error
 	files, err := filepath.Glob(filepath.Join(s.directory, "*.csv"))
 	if err != nil {
@@ -125,20 +133,17 @@ func (s *importService) readEntriesFromCSV() ([]schemas.TaskImportEntry, []error
 	filePath := files[0]
 	s.logger.WithField("file", filePath).Info("Reading CSV file")
 
-	// Read file content
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, []error{fmt.Errorf("failed to read CSV file: %w", err)}
 	}
 
-	// Remove BOM if present
 	content = bytes.TrimPrefix(content, []byte{0xEF, 0xBB, 0xBF})
 
-	// Create reader from cleaned content
 	reader := csv.NewReader(bytes.NewReader(content))
-	reader.FieldsPerRecord = -1 // Allow variable number of fields
+	reader.FieldsPerRecord = -1
 	reader.TrimLeadingSpace = true
-	reader.LazyQuotes = true // Allow lazy quotes
+	reader.LazyQuotes = true
 
 	rows, err := reader.ReadAll()
 	if err != nil {
@@ -149,15 +154,13 @@ func (s *importService) readEntriesFromCSV() ([]schemas.TaskImportEntry, []error
 		return nil, []error{fmt.Errorf("CSV file is empty")}
 	}
 
-	// Validate headers
 	if err := s.validateCSVHeaders(rows[0]); err != nil {
 		return nil, []error{fmt.Errorf("invalid CSV format: %w", err)}
 	}
 
 	s.logger.WithField("total_rows", len(rows)).Info("Total rows found in CSV")
 
-	var entries []schemas.TaskImportEntry
-	// Skip header row
+	var entries []schemas.TaskImportDTO
 	for i, row := range rows[1:] {
 		s.logger.WithFields(logrus.Fields{
 			"row_number": i + 2,
@@ -189,15 +192,15 @@ func (s *importService) readEntriesFromCSV() ([]schemas.TaskImportEntry, []error
 	return entries, nil
 }
 
-func (s *importService) parseEntry(row []string, rowNum int) (schemas.TaskImportEntry, error) {
+func (s *importService) parseEntry(row []string, rowNum int) (schemas.TaskImportDTO, error) {
 	age, err := strconv.Atoi(row[2])
 	if err != nil {
-		return schemas.TaskImportEntry{}, fmt.Errorf("invalid age at row %d: %w", rowNum, err)
+		return schemas.TaskImportDTO{}, fmt.Errorf("invalid age at row %d: %w", rowNum, err)
 	}
 
 	salary, err := strconv.ParseFloat(row[7], 64)
 	if err != nil {
-		return schemas.TaskImportEntry{}, fmt.Errorf("invalid salary at row %d: %w", rowNum, err)
+		return schemas.TaskImportDTO{}, fmt.Errorf("invalid salary at row %d: %w", rowNum, err)
 	}
 
 	var hireDate time.Time
@@ -217,10 +220,10 @@ func (s *importService) parseEntry(row []string, rowNum int) (schemas.TaskImport
 	}
 
 	if parseErr != nil {
-		return schemas.TaskImportEntry{}, fmt.Errorf("invalid hire date at row %d: date must be in DD/MM/YYYY format", rowNum)
+		return schemas.TaskImportDTO{}, fmt.Errorf("invalid hire date at row %d: date must be in DD/MM/YYYY format", rowNum)
 	}
 
-	return schemas.TaskImportEntry{
+	return schemas.TaskImportDTO{
 		Name:        strings.TrimSpace(row[0]),
 		Email:       strings.TrimSpace(row[1]),
 		Age:         age,
@@ -233,7 +236,7 @@ func (s *importService) parseEntry(row []string, rowNum int) (schemas.TaskImport
 	}, nil
 }
 
-func (s *importService) createErrorResponse(errs []error, stats *schemas.TaskImportStats) *schemas.TaskImportResponse {
+func (s *importService) createErrorResponse(errs []error, stats *schemas.ImportStatsDTO) *schemas.ImportTaskResponseDTO {
 	errorMessages := make([]string, len(errs))
 	for i, err := range errs {
 		errorMessages[i] = err.Error()
@@ -241,7 +244,7 @@ func (s *importService) createErrorResponse(errs []error, stats *schemas.TaskImp
 
 	stats.ErrorCount = len(errs)
 
-	return &schemas.TaskImportResponse{
+	return &schemas.ImportTaskResponseDTO{
 		Success:      false,
 		Message:      "Import failed",
 		ImportedAt:   time.Now(),

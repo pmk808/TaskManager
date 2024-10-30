@@ -5,6 +5,6 @@ import (
 )
 
 type Validator interface {
-	ValidateEntry(entry *schemas.TaskImportEntry) error
-	ValidateBatch(entries []schemas.TaskImportEntry) error
+	ValidateEntry(entry *schemas.TaskImportDTO) error
+	ValidateBatch(entries []schemas.TaskImportDTO) error
 }

@@ -44,7 +44,7 @@ func NewTaskCommandRepository(cfg *config.DatabaseConfig, logger *logrus.Logger)
 }
 
 // BulkCreateTasks handles bulk insertion of tasks
-func (r *taskCommandRepository) BulkCreateTasks(tasks []schemas.TaskImportEntry) error {
+func (r *taskCommandRepository) BulkCreateTasks(tasks []schemas.TaskModel) error {
 	r.logger.WithField("task_count", len(tasks)).Info("Starting bulk task creation")
 
 	tx, err := r.db.Begin()
@@ -54,19 +54,18 @@ func (r *taskCommandRepository) BulkCreateTasks(tasks []schemas.TaskImportEntry)
 	}
 	defer tx.Rollback()
 
-	// Prepare statement for inserting tasks
 	stmt, err := tx.Prepare(`
-        INSERT INTO task_management.tasks (
-            name, email, age, address, phone_number, 
-            department, position, salary, hire_date
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    `)
+		INSERT INTO task_management.tasks (
+			name, email, age, address, phone_number, 
+			department, position, salary, hire_date, 
+			is_active, client_name, client_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
 	defer stmt.Close()
 
-	// Insert all tasks
 	for i, task := range tasks {
 		_, err = stmt.Exec(
 			task.Name,
@@ -78,6 +77,9 @@ func (r *taskCommandRepository) BulkCreateTasks(tasks []schemas.TaskImportEntry)
 			task.Position,
 			task.Salary,
 			task.HireDate,
+			task.IsActive,
+			task.ClientName,
+			task.ClientID,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to insert task at row %d: %w", i+1, err)

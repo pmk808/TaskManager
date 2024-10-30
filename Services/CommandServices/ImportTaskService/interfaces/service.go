@@ -5,5 +5,5 @@ import (
 )
 
 type ImportService interface {
-	Import() (*schemas.TaskImportResponse, error)
+	Import() (*schemas.ImportTaskResponseDTO, error)
 }
