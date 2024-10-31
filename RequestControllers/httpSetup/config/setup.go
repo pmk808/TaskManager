@@ -10,6 +10,7 @@ type Config struct {
 	Server   ServerConfig   `mapstructure:"server" validate:"required"`
 	Database DatabaseConfig `mapstructure:"database" validate:"required"`
 	Import   ImportConfig   `mapstructure:"import" validate:"required"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
 }
 
 type ServerConfig struct {
@@ -23,6 +24,11 @@ type DatabaseConfig struct {
 	Password string `mapstructure:"password" validate:"required"`
 	DBName   string `mapstructure:"dbname" validate:"required"`
 	SSLMode  string `mapstructure:"sslmode" validate:"required,oneof=disable enable verify-full"`
+}
+
+type JWTConfig struct {
+	SecretKey   string `mapstructure:"secret_key" validate:"required"`
+	ExpiryHours int    `mapstructure:"expiry_hours" validate:"required,min=1"`
 }
 
 type ImportConfig struct {

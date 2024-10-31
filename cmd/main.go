@@ -14,10 +14,13 @@ import (
 	cmdRepoInterfaces "taskmanager/Repository/CommandRepository/interfaces"
 	"taskmanager/Repository/QueryRepository"
 	queryRepoInterfaces "taskmanager/Repository/QueryRepository/interfaces"
+	"taskmanager/RequestControllers/AuthRequest"
+	authInterfaces "taskmanager/RequestControllers/AuthRequest/interfaces"
 	"taskmanager/RequestControllers/CommandRequest"
 	"taskmanager/RequestControllers/QueryRequest"
 	"taskmanager/RequestControllers/httpSetup"
 	"taskmanager/RequestControllers/httpSetup/config"
+	"taskmanager/RequestControllers/httpSetup/jwt"
 	"taskmanager/RequestControllers/httpSetup/logger"
 	"taskmanager/Services/CommandServices/ImportTaskService"
 	commandServiceInterfaces "taskmanager/Services/CommandServices/ImportTaskService/interfaces"
@@ -66,6 +69,9 @@ type appDependencies struct {
 func initializeApp(cfg *config.Config, logger *logrus.Logger) (*appDependencies, error) {
 	logger.Info("Initializing application dependencies")
 
+	// Initialize JWT Manager
+	jwtManager := jwt.NewJWTManager(cfg.JWT.SecretKey, cfg.JWT.ExpiryHours)
+
 	// Initialize repositories
 	commandRepo, queryRepo, err := initializeRepositories(cfg, logger)
 	if err != nil {
@@ -78,8 +84,11 @@ func initializeApp(cfg *config.Config, logger *logrus.Logger) (*appDependencies,
 		return nil, err
 	}
 
-	// Initialize controllers
-	router, err := initializeControllers(cfg, logger, commandService, queryService)
+	// Initialize auth controller
+	authController := AuthRequest.NewAuthController(jwtManager, logger)
+
+	// Initialize controllers and router
+	router, err := initializeControllers(cfg, logger, commandService, queryService, authController, jwtManager)
 	if err != nil {
 		return nil, err
 	}
@@ -146,6 +155,8 @@ func initializeControllers(
 	logger *logrus.Logger,
 	commandService commandServiceInterfaces.ImportService,
 	queryService queryServiceInterfaces.TaskQueryService,
+	authController authInterfaces.AuthController,
+	jwtManager *jwt.JWTManager,
 ) (*gin.Engine, error) {
 	logger.Info("Initializing controllers")
 
@@ -157,6 +168,8 @@ func initializeControllers(
 	routerConfig := httpSetup.RouterConfig{
 		CommandController: commandController,
 		QueryController:   queryController,
+		AuthController:    authController,
+		JWTManager:        jwtManager,
 		Logger:            logger,
 	}
 	router := httpSetup.SetupRouter(routerConfig)

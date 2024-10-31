@@ -26,34 +26,28 @@ func NewQueryApiController(
 }
 
 func (c *queryApiController) RegisterRoutes(router *gin.RouterGroup) {
-	router.POST("/tasks/active", c.GetActiveTasks)
-	router.POST("/tasks/history", c.GetTaskStatusHistory)
+	router.GET("/tasks/active", c.GetActiveTasks)
+	router.GET("/tasks/history", c.GetTaskStatusHistory)
 }
 
 // GetActiveTasks godoc
 // @Summary Get active tasks for a client
 // @Description Retrieves all active tasks for a specific client
 // @Tags queries
-// @Accept json
 // @Produce json
-// @Param request body dto.ClientQueryRequest true "Client details"
+// @Security Bearer
 // @Success 200 {object} interfaces.TasksResponseDTO
-// @Failure 400 {object} interfaces.TasksResponseDTO
-// @Failure 500 {object} interfaces.TasksResponseDTO
-// @Router /api/queries/tasks/active [post]
+// @Failure 401 {object} interfaces.TasksResponseDTO
+// @Router /queries/tasks/active [get]
 func (c *queryApiController) GetActiveTasks(ctx *gin.Context) {
-	var request dto.ClientQueryRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		c.logger.WithError(err).Error("Invalid request body for GetActiveTasks")
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": "Invalid request format",
-			"errors":  []string{err.Error()},
-		})
-		return
-	}
+	clientName, _ := ctx.Get("client_name")
+	clientID, _ := ctx.Get("client_id")
 
-	response, err := c.queryService.GetActiveTasks(ctx, request.ClientName, request.ClientID)
+	response, err := c.queryService.GetActiveTasks(
+		ctx,
+		clientName.(string),
+		clientID.(string),
+	)
 	if err != nil {
 		c.logger.WithError(err).Error("Failed to get active tasks")
 		ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -68,16 +62,14 @@ func (c *queryApiController) GetActiveTasks(ctx *gin.Context) {
 }
 
 // GetTaskStatusHistory godoc
-// @Summary Get task status history for a client
-// @Description Retrieves the status history of all tasks for a specific client
+// @Summary Get task status history
+// @Description Retrieves task status history for a client
 // @Tags queries
-// @Accept json
 // @Produce json
-// @Param request body dto.ClientQueryRequest true "Client details"
+// @Security Bearer
 // @Success 200 {object} interfaces.StatusHistoryResponseDTO
-// @Failure 400 {object} interfaces.StatusHistoryResponseDTO
-// @Failure 500 {object} interfaces.StatusHistoryResponseDTO
-// @Router /api/queries/tasks/history [post]
+// @Failure 401 {object} interfaces.StatusHistoryResponseDTO
+// @Router /queries/tasks/history [get]
 func (c *queryApiController) GetTaskStatusHistory(ctx *gin.Context) {
 	var request dto.ClientQueryRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {

@@ -43,9 +43,172 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/api/queries/tasks/active": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Retrieves all active tasks for a specific client",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "queries"
+                ],
+                "summary": "Get active tasks for a client",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/interfaces.TasksResponseDTO"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/interfaces.TasksResponseDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/interfaces.TasksResponseDTO"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/queries/tasks/history": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Retrieves the status history of all tasks for a client",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "queries"
+                ],
+                "summary": "Get task status history for a client",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/interfaces.StatusHistoryResponseDTO"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/interfaces.StatusHistoryResponseDTO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/interfaces.StatusHistoryResponseDTO"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "interfaces.StatusDetailDTO": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "status_description": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "integer"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "interfaces.StatusHistoryResponseDTO": {
+            "type": "object",
+            "properties": {
+                "history": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/interfaces.StatusDetailDTO"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "interfaces.TaskDetailDTO": {
+            "type": "object",
+            "properties": {
+                "client_id": {
+                    "type": "string"
+                },
+                "client_name": {
+                    "type": "string"
+                },
+                "department": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "string"
+                }
+            }
+        },
+        "interfaces.TasksResponseDTO": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/interfaces.TaskDetailDTO"
+                    }
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
         "schemas.TaskImportResponse": {
             "type": "object",
             "properties": {
