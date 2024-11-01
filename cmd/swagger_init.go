@@ -2,7 +2,7 @@ package main
 
 // @title Task Manager API
 // @version 1.0
-// @description Task management system with CQRS implementation
+// @description Task management system
 
 // @securityDefinitions.apikey Bearer
 // @in header
@@ -11,4 +11,5 @@ package main
 
 // @host localhost:8080
 // @BasePath /api
+// @schemes http
 func SwaggerInfo() {}

@@ -10,6 +10,15 @@ import (
 
 func JWTAuthMiddleware(jwtManager *jwt.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Development mode bypass
+		if jwt.DevMode {
+			c.Set("client_name", jwt.DevClientName)
+			c.Set("client_id", jwt.DevClientID)
+			c.Next()
+			return
+		}
+
+		// Production mode JWT validation
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{

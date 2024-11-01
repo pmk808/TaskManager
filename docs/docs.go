@@ -15,6 +15,46 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/auth/token": {
+            "post": {
+                "description": "Generates a JWT token for client authentication",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Generate JWT token",
+                "parameters": [
+                    {
+                        "description": "Client credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenerateTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenerateTokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GenerateTokenResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/commands/import": {
             "post": {
                 "description": "Triggers the task import process from a specified directory",
@@ -52,6 +92,9 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Retrieves all active tasks for a specific client",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -71,12 +114,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/interfaces.TasksResponseDTO"
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/interfaces.TasksResponseDTO"
-                        }
                     }
                 }
             }
@@ -88,14 +125,17 @@ const docTemplate = `{
                         "Bearer": []
                     }
                 ],
-                "description": "Retrieves the status history of all tasks for a client",
+                "description": "Retrieves task status history for a client",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "queries"
                 ],
-                "summary": "Get task status history for a client",
+                "summary": "Get task status history",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -108,18 +148,51 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/interfaces.StatusHistoryResponseDTO"
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/interfaces.StatusHistoryResponseDTO"
-                        }
                     }
                 }
             }
         }
     },
     "definitions": {
+        "dto.GenerateTokenRequest": {
+            "type": "object",
+            "required": [
+                "client_id",
+                "client_name"
+            ],
+            "properties": {
+                "client_id": {
+                    "description": "Client UUID for authentication",
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "client_name": {
+                    "description": "Client name for authentication",
+                    "type": "string",
+                    "example": "Client One Corp"
+                }
+            }
+        },
+        "dto.GenerateTokenResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "description": "Response message",
+                    "type": "string",
+                    "example": "Token generated successfully"
+                },
+                "success": {
+                    "description": "Indicates if the operation was successful",
+                    "type": "boolean",
+                    "example": true
+                },
+                "token": {
+                    "description": "JWT token if successful",
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIs..."
+                }
+            }
+        },
         "interfaces.StatusDetailDTO": {
             "type": "object",
             "properties": {

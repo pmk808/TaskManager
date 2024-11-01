@@ -2,7 +2,6 @@ package QueryRequest
 
 import (
 	"net/http"
-	"taskmanager/RequestControllers/QueryRequest/dto"
 	controllerInterfaces "taskmanager/RequestControllers/QueryRequest/interfaces"
 	serviceInterfaces "taskmanager/Services/QueryServices/TaskQueryService/interfaces"
 
@@ -37,8 +36,9 @@ func (c *queryApiController) RegisterRoutes(router *gin.RouterGroup) {
 // @Produce json
 // @Security Bearer
 // @Success 200 {object} interfaces.TasksResponseDTO
-// @Failure 401 {object} interfaces.TasksResponseDTO
-// @Router /queries/tasks/active [get]
+// @Failure 400 {object} interfaces.TasksResponseDTO
+// @Failure 500 {object} interfaces.TasksResponseDTO
+// @Router /api/queries/tasks/active [post]
 func (c *queryApiController) GetActiveTasks(ctx *gin.Context) {
 	clientName, _ := ctx.Get("client_name")
 	clientID, _ := ctx.Get("client_id")
@@ -68,21 +68,19 @@ func (c *queryApiController) GetActiveTasks(ctx *gin.Context) {
 // @Produce json
 // @Security Bearer
 // @Success 200 {object} interfaces.StatusHistoryResponseDTO
-// @Failure 401 {object} interfaces.StatusHistoryResponseDTO
-// @Router /queries/tasks/history [get]
+// @Failure 400 {object} interfaces.StatusHistoryResponseDTO
+// @Failure 500 {object} interfaces.StatusHistoryResponseDTO
+// @Router /api/queries/tasks/history [post]
 func (c *queryApiController) GetTaskStatusHistory(ctx *gin.Context) {
-	var request dto.ClientQueryRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		c.logger.WithError(err).Error("Invalid request body for GetTaskStatusHistory")
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": "Invalid request format",
-			"errors":  []string{err.Error()},
-		})
-		return
-	}
+	// Get client info from context (set by JWT middleware)
+	clientName, _ := ctx.Get("client_name")
+	clientID, _ := ctx.Get("client_id")
 
-	response, err := c.queryService.GetTaskStatusHistory(ctx, request.ClientName, request.ClientID)
+	response, err := c.queryService.GetTaskStatusHistory(
+		ctx,
+		clientName.(string),
+		clientID.(string),
+	)
 	if err != nil {
 		c.logger.WithError(err).Error("Failed to get task status history")
 		ctx.JSON(http.StatusInternalServerError, gin.H{

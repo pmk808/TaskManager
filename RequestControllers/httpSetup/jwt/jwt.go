@@ -7,6 +7,12 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
+const (
+	DevMode       = true
+	DevClientName = "Client One Corp"
+	DevClientID   = "14a1b732-a403-468d-ae7f-5fcd23ea6f2e"
+)
+
 type ClientClaims struct {
 	ClientName string `json:"client_name"`
 	ClientID   string `json:"client_id"`

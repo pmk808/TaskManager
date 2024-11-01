@@ -35,7 +35,7 @@ func (c *authController) RegisterRoutes(router *gin.RouterGroup) {
 // @Param request body dto.GenerateTokenRequest true "Client credentials"
 // @Success 200 {object} dto.GenerateTokenResponse
 // @Failure 400 {object} dto.GenerateTokenResponse
-// @Router /auth/token [post]
+// @Router /api/auth/token [post]
 func (c *authController) GenerateToken(ctx *gin.Context) {
 	var request dto.GenerateTokenRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {

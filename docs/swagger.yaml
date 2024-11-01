@@ -1,62 +1,4 @@
 definitions:
-  interfaces.StatusDetailDTO:
-    properties:
-      created_at:
-        type: string
-      status:
-        type: string
-      status_description:
-        type: string
-      task_id:
-        type: integer
-      updated_by:
-        type: string
-    type: object
-  interfaces.StatusHistoryResponseDTO:
-    properties:
-      history:
-        items:
-          $ref: '#/definitions/interfaces.StatusDetailDTO'
-        type: array
-      message:
-        type: string
-      success:
-        type: boolean
-      total_count:
-        type: integer
-    type: object
-  interfaces.TaskDetailDTO:
-    properties:
-      client_id:
-        type: string
-      client_name:
-        type: string
-      department:
-        type: string
-      email:
-        type: string
-      id:
-        type: integer
-      is_active:
-        type: boolean
-      name:
-        type: string
-      position:
-        type: string
-    type: object
-  interfaces.TasksResponseDTO:
-    properties:
-      message:
-        type: string
-      success:
-        type: boolean
-      tasks:
-        items:
-          $ref: '#/definitions/interfaces.TaskDetailDTO'
-        type: array
-      total_count:
-        type: integer
-    type: object
   schemas.TaskImportResponse:
     properties:
       errors:
@@ -93,6 +35,32 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/auth/token:
+    post:
+      consumes:
+      - application/json
+      description: Generates a JWT token for client authentication
+      parameters:
+      - description: Client credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.GenerateTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GenerateTokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.GenerateTokenResponse'
+      summary: Generate JWT token
+      tags:
+      - auth
   /api/commands/import:
     post:
       consumes:
@@ -112,50 +80,4 @@ paths:
       summary: Import tasks from CSV
       tags:
       - commands
-  /api/queries/tasks/active:
-    get:
-      description: Retrieves all active tasks for a specific client
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/interfaces.TasksResponseDTO'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/interfaces.TasksResponseDTO'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/interfaces.TasksResponseDTO'
-      security:
-      - Bearer: []
-      summary: Get active tasks for a client
-      tags:
-      - queries
-  /api/queries/tasks/history:
-    get:
-      description: Retrieves the status history of all tasks for a client
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/interfaces.StatusHistoryResponseDTO'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/interfaces.StatusHistoryResponseDTO'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/interfaces.StatusHistoryResponseDTO'
-      security:
-      - Bearer: []
-      summary: Get task status history for a client
-      tags:
-      - queries
 swagger: "2.0"
