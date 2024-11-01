@@ -33,8 +33,13 @@ func (s *taskQueryService) GetActiveTasks(
 	clientName string,
 	clientID string,
 ) (*serviceInterfaces.TasksResponseDTO, error) {
+	s.logger.WithFields(logrus.Fields{
+		"client_name": clientName,
+		"client_id":   clientID,
+	}).Info("Processing GetActiveTasks request")
 	// Validate input parameters
 	if err := s.validator.ValidateClientParams(clientName, clientID); err != nil {
+		s.logger.WithError(err).Error("Validation failed for GetActiveTasks")
 		return &serviceInterfaces.TasksResponseDTO{
 			Success: false,
 			Message: fmt.Sprintf("Invalid parameters: %v", err),
@@ -51,6 +56,8 @@ func (s *taskQueryService) GetActiveTasks(
 		}, err
 	}
 
+	s.logger.WithField("task_count", len(tasks)).Info("Retrieved tasks from repository")
+
 	// Map repository data to DTOs
 	var taskDTOs []serviceInterfaces.TaskDetailDTO
 	for _, task := range tasks {
@@ -66,12 +73,15 @@ func (s *taskQueryService) GetActiveTasks(
 		})
 	}
 
-	return &serviceInterfaces.TasksResponseDTO{
+	response := &serviceInterfaces.TasksResponseDTO{
 		Success:    true,
 		Message:    "Successfully retrieved active tasks",
 		Tasks:      taskDTOs,
 		TotalCount: len(taskDTOs),
-	}, nil
+	}
+
+	s.logger.WithField("response", response).Debug("Sending response")
+	return response, nil
 }
 
 func (s *taskQueryService) GetTaskStatusHistory(
@@ -79,6 +89,10 @@ func (s *taskQueryService) GetTaskStatusHistory(
 	clientName string,
 	clientID string,
 ) (*serviceInterfaces.StatusHistoryResponseDTO, error) {
+	s.logger.WithFields(logrus.Fields{
+		"client_name": clientName,
+		"client_id":   clientID,
+	}).Info("Processing GetTaskHistory request")
 	// Validate input parameters
 	if err := s.validator.ValidateClientParams(clientName, clientID); err != nil {
 		return &serviceInterfaces.StatusHistoryResponseDTO{
@@ -97,6 +111,8 @@ func (s *taskQueryService) GetTaskStatusHistory(
 		}, err
 	}
 
+	s.logger.WithField("task_count", len(history)).Info("Retrieved task history from repository")
+
 	// Map repository data to DTOs
 	var historyDTOs []serviceInterfaces.StatusDetailDTO
 	for _, status := range history {
@@ -109,10 +125,13 @@ func (s *taskQueryService) GetTaskStatusHistory(
 		})
 	}
 
-	return &serviceInterfaces.StatusHistoryResponseDTO{
+	response := &serviceInterfaces.StatusHistoryResponseDTO{
 		Success:    true,
 		Message:    "Successfully retrieved status history",
 		History:    historyDTOs,
 		TotalCount: len(historyDTOs),
-	}, nil
+	}
+
+	s.logger.WithField("response", response).Debug("Sending response")
+	return response, nil
 }

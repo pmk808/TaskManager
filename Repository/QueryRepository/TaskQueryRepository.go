@@ -41,6 +41,10 @@ func NewTaskQueryRepository(cfg *config.DatabaseConfig, logger *logrus.Logger) (
 
 // GetActiveTasks retrieves active tasks for a specific client
 func (r *taskQueryRepository) GetActiveTasks(ctx context.Context, clientName string, clientID string) ([]interfaces.TaskDTO, error) {
+	r.logger.WithFields(logrus.Fields{
+		"client_name": clientName,
+		"client_id":   clientID,
+	}).Debug("Querying active tasks")
 	query := `
 		SELECT 
 			id, name, email, age, address, phone_number,
@@ -51,6 +55,11 @@ func (r *taskQueryRepository) GetActiveTasks(ctx context.Context, clientName str
 		AND client_id = $2
 		AND is_active = true
 	`
+
+	r.logger.WithFields(logrus.Fields{
+		"query":  query,
+		"params": []interface{}{clientName, clientID},
+	}).Debug("Executing query")
 
 	rows, err := r.db.QueryContext(ctx, query, clientName, clientID)
 	if err != nil {
@@ -87,12 +96,16 @@ func (r *taskQueryRepository) GetActiveTasks(ctx context.Context, clientName str
 		r.logger.WithError(err).Error("Error during row iteration")
 		return nil, fmt.Errorf("error during row iteration: %w", err)
 	}
-
+	r.logger.WithField("task_count", len(tasks)).Info("Retrieved active tasks")
 	return tasks, nil
 }
 
 // GetTaskStatusHistory retrieves status history for a specific client
 func (r *taskQueryRepository) GetTaskStatusHistory(ctx context.Context, clientName string, clientID string) ([]interfaces.TaskStatusDTO, error) {
+	r.logger.WithFields(logrus.Fields{
+		"client_name": clientName,
+		"client_id":   clientID,
+	}).Debug("Querying task status history")
 	query := `
 		SELECT 
 			task_id, client_name, client_id, status,
@@ -134,6 +147,6 @@ func (r *taskQueryRepository) GetTaskStatusHistory(ctx context.Context, clientNa
 		r.logger.WithError(err).Error("Error during row iteration")
 		return nil, fmt.Errorf("error during row iteration: %w", err)
 	}
-
+	r.logger.WithField("history_count", len(statusHistory)).Info("Retrieved status history")
 	return statusHistory, nil
 }

@@ -2,9 +2,9 @@
 CREATE OR REPLACE FUNCTION task_management.insert_dummy_data()
 RETURNS void AS $$
 DECLARE
-    client1_id UUID := gen_random_uuid();
-    client2_id UUID := gen_random_uuid();
-    client3_id UUID := gen_random_uuid();
+    client1_id UUID := '8db1dc6c-cc41-4683-a03f-52cceea9b087';  
+    client2_id UUID := '6e084dfe-cfd7-4f37-8524-0a89848c4d93';  
+    client3_id UUID := '1a1b24b8-f439-4334-a91c-ba30a814614c'; 
     task_id INTEGER;
 BEGIN
     -- Insert dummy tasks for Client 1

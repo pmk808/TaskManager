@@ -9,8 +9,8 @@ import (
 
 const (
 	DevMode       = true
-	DevClientName = "Client One Corp"
-	DevClientID   = "14a1b732-a403-468d-ae7f-5fcd23ea6f2e"
+	DevClientName = "Client Three Inc"
+	DevClientID   = "1a1b24b8-f439-4334-a91c-ba30a814614c"
 )
 
 type ClientClaims struct {

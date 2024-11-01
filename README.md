@@ -1,126 +1,181 @@
-# Task Manager Application
+# Task Manager API
 
 ## Project Structure
 ```
 TaskManager/
 ├── cmd/
-│   └── main.go                 # Application entry point
-├── Deployment/
+│   ├── main.go                 # Application entry point
+│   └── swagger_init.go         # Swagger documentation initialization
+├── docs/                       # Swagger generated documentation
+│   ├── docs.go
+│   ├── swagger.json
+│   └── swagger.yaml
+├── deployment/                 # Deployment configurations
 │   ├── scripts/
-│   │   └── setup_db.sh        # Database initialization script
+│   │   └── setup_db.sh        # Database setup script
 │   └── sql/
 │       ├── 01_create_database.sql
 │       ├── 02_create_schema.sql
-│       └── 03_create_table.sql
-├── Repository/
+│       ├── 03_create_task_table.sql
+│       ├── 04_create_status_table.sql
+│       └── 05_insert_dummy_data.sql
+├── import/                     # CSV import directory
+│   └── dummy_tasks.csv
+├── Repository/                 # Data access layer
 │   ├── CommandRepository/
 │   │   ├── interfaces/
 │   │   │   └── repository.go
 │   │   └── TaskCommandRepository.go
-│   └── QueryRepository/       # (Future implementation)
-├── RequestControllers/
-│   ├── httpSetup/
-│   │   ├── config/
-│   │   └── logger/
+│   └── QueryRepository/
+│       ├── interfaces/
+│       │   └── repository.go
+│       └── TaskQueryRepository.go
+├── RequestControllers/         # API Controllers
+│   ├── AuthRequest/
+│   │   ├── dto/
+│   │   │   └── auth.go
+│   │   ├── interfaces/
+│   │   │   └── controller.go
+│   │   └── AuthController.go
 │   ├── CommandRequest/
 │   │   ├── interfaces/
+│   │   │   └── controller.go
 │   │   └── CommandApiController.go
-│   └── QueryRequest/          # (Future implementation)
-├── Services/
-│   └── CommandServices/
-│       └── ImportTaskService/
+│   ├── QueryRequest/
+│   │   ├── interfaces/
+│   │   │   └── controller.go
+│   │   ├── dto/
+│   │   │   └── request.go
+│   │   └── QueryApiController.go
+│   └── httpSetup/
+│       ├── config/
+│       │   └── setup.go
+│       ├── jwt/
+│       │   └── jwt.go
+│       ├── logger/
+│       │   └── setup.go
+│       ├── middleware/
+│       │   └── jwt_middleware.go
+│       └── setup.go
+├── Services/                   # Business logic layer
+│   ├── CommandServices/
+│   │   └── ImportTaskService/
+│   │       ├── interfaces/
+│   │       │   ├── repository.go
+│   │       │   ├── service.go
+│   │       │   └── validator.go
+│   │       ├── schemas/
+│   │       │   ├── dtos.go
+│   │       │   ├── models.go
+│   │       │   ├── task.go
+│   │       ├── validation/
+│   │       │   ├── interfaces/
+│   │       │   │   └── validator.go
+│   │       │   ├── dataValidator_test.go
+│   │       │   └── dataValidator.go
+│   │       └── ImportTaskService.go
+│   └── QueryServices/
+│       └── TaskQueryService/
 │           ├── interfaces/
+│           │   └── service.go
 │           ├── validation/
-│           ├── schemas/
-│           └── ImportTaskService.go
-├── config.yaml                # Application configuration
-└── start.sh                   # Application startup script
+│           │   └── QueryValidator.go
+│           └── TaskQueryService.go
+├── config.yaml                 # Application configuration
+├── go.mod                     # Go module file
+├── go.sum                     # Go dependencies
+├── start.sh                   # Application startup script
+└── README.md                  # Project documentation
 ```
 
-## Key Changes from Previous Structure
+## Features
 
-### 1. CQRS Implementation
-- Separated Command (write) and Query (read) operations
-- Command operations: Import tasks from CSV
-- Query operations: (Prepared for future implementation)
+- CQRS implementation separating read and write operations
+- JWT authentication for secure API access
+- Swagger documentation
+- PostgreSQL database with proper schema management
+- CSV data import functionality
+- Client-based task filtering
+- Task status history tracking
 
-### 2. Separation of Database Initialization
-**Before:**
-- Database table creation was handled in repository layer
-- Mixed concerns between data operations and schema management
+## Endpoints
 
-**After:**
-- Moved database initialization to deployment scripts
-- Clear separation between database setup and application logic
-- Using SQL scripts for schema and table management
+### Command Endpoints
+- `POST /api/commands/import`: Import tasks from CSV file
 
-### 3. Improved Configuration
-- Centralized configuration in config.yaml
-- Configuration handling moved to httpSetup/config
-- Environment-specific settings support
+### Query Endpoints
+- `GET /api/queries/tasks/active`: Get active tasks for a client
+- `GET /api/queries/tasks/history`: Get task status history for a client
 
-## Components
+### Auth Endpoints
+- `POST /api/auth/token`: Generate JWT token for authentication
 
-### 1. Database Scripts
-Located in `deployment/sql/`:
-```sql
--- 01_create_database.sql
-CREATE DATABASE taskmanager ...
+## Requirements
 
--- 02_create_schema.sql
-CREATE SCHEMA task_management ...
+- Go 1.19 or higher
+- PostgreSQL 12 or higher
+- Git
 
--- 03_create_table.sql
-CREATE TABLE task_management.tasks ...
-```
+## Setup
 
-### 2. Repository Layer
-- Focuses purely on data operations
-- No schema management responsibilities
-- Clear interface definitions
-
-```go
-type TaskCommandRepository interface {
-    BulkCreateTasks(tasks []schemas.TaskImportEntry) error
-}
-```
-
-### 3. Service Layer
-- Business logic implementation
-- CSV processing and validation
-- Error handling and logging
-
-### 4. Controllers
-- HTTP endpoint handlers
-- Request/response management
-- Route registration
-
-## Setup and Running
-
-### Prerequisites
-- Go 1.19 or later
-- PostgreSQL 12 or later
-- Git Bash (for Windows)
-- yq (YAML processor)
-
-### Initial Setup
 1. Clone the repository:
 ```bash
 git clone <repository-url>
 cd TaskManager
 ```
 
-2. Make scripts executable:
+2. Install dependencies:
 ```bash
-chmod +x start.sh
-chmod +x deployment/scripts/setup_db.sh
+go mod tidy
 ```
 
 3. Configure the application:
-Edit `config.yaml`:
+- Copy `config.yaml.example` to `config.yaml`
+- Update database credentials and other settings
+
+4. Start the application:
+```bash
+./start.sh
+```
+
+## Development
+
+### Adding New Features
+1. Create a new feature branch:
+```bash
+git checkout -b feature/your-feature-name
+```
+
+2. Make changes and commit:
+```bash
+git add .
+git commit -m "feat: your feature description"
+```
+
+3. Push changes and create pull request:
+```bash
+git push origin feature/your-feature-name
+```
+
+### Database Migrations
+- Add new SQL scripts in `deployment/sql/`
+- Update `setup_db.sh` if needed
+- Test migrations locally before committing
+
+## Testing
+
+### Running Tests
+```bash
+go test ./...
+```
+
+### API Testing
+Use Swagger UI at: `http://localhost:8080/swagger/index.html`
+
+## Configuration
+
+### Database Configuration
 ```yaml
-server:
-  port: 8080
 database:
   host: localhost
   port: 5432
@@ -130,51 +185,26 @@ database:
   sslmode: disable
 ```
 
-### Running the Application
-1. Start the application:
-```bash
-./start.sh
-```
-This will:
-- Run database setup scripts
-- Create necessary schema and tables
-- Start the Go application
-
-2. Import tasks using the API:
-```bash
-POST http://localhost:8080/api/commands/import
+### JWT Configuration
+```yaml
+jwt:
+  secret_key: your_secret_key
+  expiry_hours: 24
 ```
 
-## Development Guidelines
+## Project Structure Details
 
-### Adding New Features
-1. Command Operations:
-   - Add new command service in Services/CommandServices
-   - Implement corresponding repository methods
-   - Create new command controller if needed
+### Command Pattern
+- Commands represent actions that modify state
+- Each command has its own service and handler
+- Validation occurs before processing
 
-2. Query Operations:
-   - Create new service in Services/QueryServices
-   - Implement repository methods in QueryRepository
-   - Add query controller in QueryRequest
+### Query Pattern
+- Queries retrieve data without modifications
+- Optimized for read operations
+- Client-based filtering
 
-## Testing
-```bash
-# Run unit tests
-go test ./...
-
-# Test database setup
-./deployment/scripts/setup_db.sh
-```
-
-## Contributing
-1. Follow the established CQRS pattern
-2. Keep database initialization separate from application code
-3. Add appropriate tests for new features
-4. Update documentation as needed
-
-## Troubleshooting
-- Check PostgreSQL connection settings in config.yaml
-- Ensure all required SQL scripts exist
-- Verify file permissions for shell scripts
-- Check logs for detailed error messages
+### Authentication
+- JWT-based authentication
+- Token generation and validation
+- Secure parameter handling
